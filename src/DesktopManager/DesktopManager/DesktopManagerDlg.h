@@ -337,6 +337,16 @@ public:
         return 0;
     }
 
+    //获取登录桌面文件夹的路径    
+    int SetDesktopIconsState(BOOL bHideIcons)
+    {
+        CRegKey regKey = {};
+        if (ERROR_SUCCESS == regKey.Open(HKEY_CURRENT_USER, TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced"), KEY_READ))
+        {
+            regKey.SetDWORDValue(TEXT("HideIcons"), bHideIcons);
+        }
+        return 0;
+    }
     //获取指定目录的IShellFolder接口    
     IShellFolder* GetIShellFolderByPath(LPTSTR path)
     {

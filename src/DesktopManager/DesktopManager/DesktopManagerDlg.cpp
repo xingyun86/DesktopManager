@@ -233,9 +233,27 @@ void CDesktopManagerDlg::OnBnClickedOk()
 	//::ShowWindow(hDesktopWnd, nFlags);
 
 	HWND hTaskBar = ::FindWindow(TEXT("Shell_TrayWnd"), NULL);//find taskbar handle
-	::ShowWindow(hTaskBar, nFlags);
-	HWND hDeskIcon = ::FindWindow(TEXT("Progman"), NULL); //find desktop icons
-	::ShowWindow(hDeskIcon, nFlags);
+	//::ShowWindow(hTaskBar, nFlags);
+	HWND hDeskIcon = ::FindWindow(TEXT("Progman"), TEXT("Program Manager")); //find desktop icons
+	//::ShowWindow(hDeskIcon, nFlags);
+
+	SHELLSTATE ss = { 0 };
+	SecureZeroMemory(&ss, sizeof(ss));
+	SHELLFLAGSTATE sfs = { 0 };
+	SHGetSettings(&sfs, SSF_HIDEICONS);
+	//sfs.fHideIcons = !sfs.fHideIcons;
+	//SHGetSettings(&sfs, SSF_HIDEICONS);
+	
+	SHGetSetSettings(&ss, SSF_HIDEICONS, FALSE);
+	ss.fHideIcons = !ss.fHideIcons;
+	SHGetSetSettings(&ss, SSF_HIDEICONS, TRUE);
+	SetDesktopIconsState(ss.fHideIcons);
+	//PDWORD_PTR lpdwResult = 0;
+	//SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, NULL, NULL, SMTO_ABORTIFHUNG, 3, lpdwResult);
+	//SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_FLUSHNOWAIT, NULL, NULL);
+	//SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, NULL, NULL);
+	SHChangeNotify(SHCNE_ALLEVENTS, SHCNE_UPDATEDIR | SHCNE_UPDATEITEM, NULL, NULL);
+	SHGetSettings(&sfs, SSF_HIDEICONS);
 }
 
 
