@@ -49,15 +49,31 @@ protected:
 public:
     void ResizeWindow()
     {
-        CRect rect = {};
-        CRect rectOk = {};
-        CRect rectCancel = {};
-        GetClientRect(rect);
-        GetDlgItem(IDOK)->GetClientRect(rectOk);
-        GetDlgItem(IDCANCEL)->GetClientRect(rectCancel);
-        GetDlgItem(IDC_LIST_LINK)->MoveWindow(CRect(CPoint(0,0),CSize(rect.Width(), rect.Height() - rectOk.Height())));
-        GetDlgItem(IDOK)->MoveWindow(CRect(CPoint(rect.Width() - rectOk.Width() - rectCancel.Width(), rect.Height() - rectOk.Height()), CSize(rectOk.Width(), rectOk.Height())));
-        GetDlgItem(IDCANCEL)->MoveWindow(CRect(CPoint(rect.Width() - rectCancel.Width(), rect.Height() - rectCancel.Height()), CSize(rectCancel.Width(), rectCancel.Height())));
+        if (m_pListLink != NULL)
+        {
+            CRect rect = {};
+            CRect rectOk = {};
+            CRect rectCancel = {};
+            GetClientRect(rect);
+            GetDlgItem(IDOK)->GetClientRect(rectOk);
+            GetDlgItem(IDCANCEL)->GetClientRect(rectCancel);
+            GetDlgItem(IDC_LIST_LINK)->MoveWindow(CRect(CPoint(0, 0), CSize(rect.Width(), rect.Height() - rectOk.Height())),FALSE);
+            GetDlgItem(IDOK)->MoveWindow(CRect(CPoint(rect.Width() - rectOk.Width() - rectCancel.Width(), rect.Height() - rectOk.Height()), CSize(rectOk.Width(), rectOk.Height())), FALSE);
+            GetDlgItem(IDCANCEL)->MoveWindow(CRect(CPoint(rect.Width() - rectCancel.Width(), rect.Height() - rectCancel.Height()), CSize(rectCancel.Width(), rectCancel.Height())), FALSE);
+           
+            if (m_pListLink != NULL)
+            {
+                m_pListLink->DeleteAllItems();
+            }
+            m_strLinkList.clear();
+            while (m_NormalIconList.Remove(0));
+            if (GetDesktopIShellFolder())
+            {
+                GetIEunmIDList(m_pIShellFolder, FALSE, FALSE);
+                //GetIEunmIDList(m_pAppData, FALSE, TRUE);
+            }
+            Invalidate();
+        }
     }
 public:
     INT m_nRow = 0;
@@ -119,14 +135,11 @@ public:
     }
     void SetListCtrlStyle(ListCtrlStyleType lcstype)
     {
-        if (m_pListLink == NULL)
-        {
-            m_pListLink = ((CListCtrl*)(GetDlgItem(IDC_LIST_LINK)));
-        }
+        m_pListLink->ModifyStyleEx(0, LVS_EX_DOUBLEBUFFER, TRUE);
         switch (lcstype)
         {
         case LCSTYPE_DETAIL:
-            m_pListLink->ModifyStyle(LVS_SMALLICON | LVS_LIST | LVS_ICON, LVS_REPORT, TRUE);
+            m_pListLink->ModifyStyle(LVS_SMALLICON | LVS_LIST | LVS_ICON, LVS_REPORT , TRUE);
             break;
         case LCSTYPE_TILE:
             m_pListLink->ModifyStyle(LVS_SMALLICON | LVS_LIST | LVS_REPORT, LVS_ICON, TRUE);

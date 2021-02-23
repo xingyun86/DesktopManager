@@ -121,10 +121,27 @@ BOOL CDesktopManagerDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
 	// TODO: Add extra initialization here
+	m_pListLink = ((CListCtrl*)(GetDlgItem(IDC_LIST_LINK)));
+	{
+		SetWindowLong(this->GetSafeHwnd(), GWL_EXSTYLE,
+			GetWindowLong(this->GetSafeHwnd(), GWL_EXSTYLE) ^ 0X80000);
+		HMODULE hMod = GetModuleHandle(TEXT("USER32.DLL")); //显式加载DLL
+		if (hMod != NULL)
+		{
+			typedef BOOL(WINAPI* PFN_SetLayeredWindowAttributes)(HWND, COLORREF, BYTE, DWORD);
+			PFN_SetLayeredWindowAttributes fnSetLayeredWindowAttributes = (PFN_SetLayeredWindowAttributes)GetProcAddress(hMod, "SetLayeredWindowAttributes");//取得SetLayeredWindowAttributes函数指针
+			if (fnSetLayeredWindowAttributes != NULL)
+			{
+				fnSetLayeredWindowAttributes(this->GetSafeHwnd(), 0, 150, 2);      //这里使用的是透明度150，fnSetLayeredWindowAttributes是函数指针，指向了SetLayeredWindowAttributes函数。
+			}
+		}
+	}
 	SetListCtrlStyle(LCSTYPE_TILE);
 	m_NormalIconList.Create(32, 32, ILC_COLOR32 | ILC_MASK, 1, 1);
 	m_SmallIconList.Create(24, 24, ILC_COLOR24 | ILC_MASK, 1, 1);
 	GetPath(m_tDeskTopPath, m_tQuickLanchPath);
+	
+	ResizeWindow();
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -185,21 +202,12 @@ void CDesktopManagerDlg::OnSize(UINT nType, int cx, int cy)
 	CDialogEx::OnSize(nType, cx, cy);
 
 	// TODO: Add your message handler code here
-	if (m_pListLink != NULL)
-	{
-		ResizeWindow();
-	}
+	ResizeWindow();
 }
 
 
 void CDesktopManagerDlg::OnBnClickedOk()
 {
 	// TODO: Add your control notification handler code here
-	//CDialogEx::OnOK();
-
-	if (GetDesktopIShellFolder())
-	{
-		GetIEunmIDList(m_pIShellFolder, FALSE, FALSE);
-		//GetIEunmIDList(m_pAppData, FALSE, TRUE);
-	}
+	CDialogEx::OnOK();
 }
