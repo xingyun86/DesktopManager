@@ -54,13 +54,15 @@ CDesktopManagerDlg::CDesktopManagerDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_DESKTOPMANAGER_DIALOG, pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
-	m_pIShellFolder = NULL;
 	m_pIEnumFolder = NULL;
-	m_pAppData = NULL;
+	m_pIShellFolderDesktopLogon = NULL;
+	m_pIShellFolderDesktopPublic = NULL;
+	m_pIShellFolderQuickLaunch = NULL;
 	m_pIEnumFile = NULL;
 	m_pFirstLayerFolder = NULL;
 	m_pFirstLayerFile = NULL;
-	memset(m_tDesktopPath, 0, sizeof(m_tDesktopPath) / sizeof(*m_tDesktopPath));
+	memset(m_tLogonDesktopPath, 0, sizeof(m_tLogonDesktopPath) / sizeof(*m_tLogonDesktopPath));
+	memset(m_tPublicDesktopPath, 0, sizeof(m_tPublicDesktopPath) / sizeof(*m_tPublicDesktopPath));
 	memset(m_tQuickLanchPath, 0, sizeof(m_tQuickLanchPath) / sizeof(*m_tQuickLanchPath));
 	memset(m_tParentPath, 0, sizeof(m_tParentPath) / sizeof(*m_tParentPath));
 }
@@ -77,6 +79,7 @@ BEGIN_MESSAGE_MAP(CDesktopManagerDlg, CDialogEx)
 	ON_WM_SIZE()
 	ON_BN_CLICKED(IDOK, &CDesktopManagerDlg::OnBnClickedOk)
 	ON_NOTIFY(NM_DBLCLK, IDC_LIST_LINK, &CDesktopManagerDlg::OnNMDblclkListLink)
+	ON_WM_NCHITTEST()
 END_MESSAGE_MAP()
 
 
@@ -113,9 +116,8 @@ BOOL CDesktopManagerDlg::OnInitDialog()
 
 	// TODO: Add extra initialization here
 	m_pListLink = ((CListCtrl*)(GetDlgItem(IDC_LIST_LINK)));
-	{
-		SetWindowLong(this->GetSafeHwnd(), GWL_EXSTYLE,
-			GetWindowLong(this->GetSafeHwnd(), GWL_EXSTYLE) ^ 0X80000);
+	/*{
+		SetWindowLong(this->GetSafeHwnd(), GWL_EXSTYLE,	GetWindowLong(this->GetSafeHwnd(), GWL_EXSTYLE) ^ 0X80000);
 		HMODULE hMod = GetModuleHandle(TEXT("USER32.DLL")); //显式加载DLL
 		if (hMod != NULL)
 		{
@@ -126,14 +128,19 @@ BOOL CDesktopManagerDlg::OnInitDialog()
 				fnSetLayeredWindowAttributes(this->GetSafeHwnd(), 0, 180, 2);      //这里使用的是透明度150，fnSetLayeredWindowAttributes是函数指针，指向了SetLayeredWindowAttributes函数。
 			}
 		}
-	}
+	}*/
 	SetListCtrlStyle(LCSTYPE_TILE);
+	//m_pListLink->ModifyStyle(0, LVS_NOSCROLL);
+	//m_pListLink->ShowScrollBar(SB_HORZ, FALSE);
+	//m_pListLink->ShowScrollBar(SB_VERT, TRUE);
+	m_pListLink->SetIconSpacing(CSize(64, 64));     //set pictures spacing
 	m_NormalIconList.Create(32, 32, ILC_COLOR32 | ILC_MASK, 1, 1);
 	m_SmallIconList.Create(24, 24, ILC_COLOR24 | ILC_MASK, 1, 1);
-	GetDesktopPath(m_tDesktopPath);
+	GetLogonDesktopPath(m_tLogonDesktopPath);
 	GetPublicDesktopPath(m_tPublicDesktopPath);
-	GetDesktopIShellFolder();
+	GetLogonDesktopIShellFolder();
 	GetPublicDesktopIShellFolder();
+
 	ResizeWindow();
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
@@ -202,7 +209,33 @@ void CDesktopManagerDlg::OnSize(UINT nType, int cx, int cy)
 void CDesktopManagerDlg::OnBnClickedOk()
 {
 	// TODO: Add your control notification handler code here
-	CDialogEx::OnOK();
+	//CDialogEx::OnOK();
+	m_pListLink->DeleteAllItems();
+	m_strLinkList.clear();
+	while (m_NormalIconList.Remove(0));
+	while (m_SmallIconList.Remove(0));
+	if (m_pIShellFolderDesktopLogon != NULL)
+	{
+		GetIEnumIDList(m_pIShellFolderDesktopLogon, FALSE, EIDLTYPE_DESKTOP_LOGON);
+	}
+	if (m_pIShellFolderDesktopPublic != NULL)
+	{
+		GetIEnumIDList(m_pIShellFolderDesktopPublic, FALSE, EIDLTYPE_DESKTOP_PUBLIC);
+	}
+	static INT nFlags = SW_SHOWNORMAL;
+	nFlags = (nFlags == SW_SHOWNORMAL) ? SW_HIDE : SW_SHOWNORMAL;
+
+	CRect rect = {};
+	GetWindowRect(rect);
+	MoveWindow(rect.left, rect.top, 480 + ((nFlags == SW_HIDE) ? -SW_SHOWNORMAL : SW_SHOWNORMAL), (m_strLinkList.size() / 6 + 1) * 80 > 480 ? 480 : (m_strLinkList.size() / 8 + 1) * 80);
+
+	//HWND hDesktopWnd = ::FindWindowEx(::GetDesktopWindow(), NULL, WC_LISTVIEW, TEXT(""));
+	//::ShowWindow(hDesktopWnd, nFlags);
+
+	HWND hTaskBar = ::FindWindow(TEXT("Shell_TrayWnd"), NULL);//find taskbar handle
+	::ShowWindow(hTaskBar, nFlags);
+	HWND hDeskIcon = ::FindWindow(TEXT("Progman"), NULL); //find desktop icons
+	::ShowWindow(hDeskIcon, nFlags);
 }
 
 
@@ -215,4 +248,19 @@ void CDesktopManagerDlg::OnNMDblclkListLink(NMHDR* pNMHDR, LRESULT* pResult)
 	{
 		ShellExecute(NULL, TEXT("OPEN"), m_strLinkList[pNMItemActivate->iItem].path.c_str(), NULL, NULL, SW_SHOWNORMAL);
 	}
+}
+
+
+LRESULT CDesktopManagerDlg::OnNcHitTest(CPoint point)
+{
+	// TODO: Add your message handler code here and/or call default
+	CRect rect = {};
+	CRect rectOk = {};
+	GetDlgItem(IDOK)->GetClientRect(rectOk);
+	rect.left = rect.top = 0;
+	rect.bottom = rectOk.Height();
+	rect.right = rectOk.Width() + rectOk.Width();
+	ClientToScreen(&rect);
+	return rect.PtInRect(point) ? HTCAPTION : CDialog::OnNcHitTest(point);   //鼠标如果在客户区，将其当作标题栏
+	//return CDialogEx::OnNcHitTest(point);
 }
