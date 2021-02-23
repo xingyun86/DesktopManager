@@ -72,10 +72,13 @@ BOOL CDesktopManagerApp::InitInstance()
 	SetRegistryKey(_T("Local AppWizard-Generated Applications"));
 
 	(VOID)(::CoInitializeEx(NULL, COINIT_MULTITHREADED));
+
+#ifdef _DEBUG
 	AllocConsole();
 	_tfopen(TEXT("CONIN$"), TEXT("rb"));
 	_tfopen(TEXT("CONOUT$"), TEXT("wb"));
 	_tfopen(TEXT("CONOUT$"), TEXT("wb"));
+#endif // _DEBUG
 
 	CDesktopManagerDlg dlg;
 	m_pMainWnd = &dlg;
@@ -105,8 +108,10 @@ BOOL CDesktopManagerApp::InitInstance()
 #if !defined(_AFXDLL) && !defined(_AFX_NO_MFC_CONTROLS_IN_DIALOGS)
 	ControlBarCleanUp();
 #endif
-	
+
+#ifdef _DEBUG
 	FreeConsole();
+#endif // _DEBUG
 
 	::CoUninitialize();
 

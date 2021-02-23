@@ -60,19 +60,9 @@ CDesktopManagerDlg::CDesktopManagerDlg(CWnd* pParent /*=nullptr*/)
 	m_pIEnumFile = NULL;
 	m_pFirstLayerFolder = NULL;
 	m_pFirstLayerFile = NULL;
-	memset(m_tDeskTopPath, 0, sizeof(m_tDeskTopPath) / sizeof(*m_tDeskTopPath));
+	memset(m_tDesktopPath, 0, sizeof(m_tDesktopPath) / sizeof(*m_tDesktopPath));
 	memset(m_tQuickLanchPath, 0, sizeof(m_tQuickLanchPath) / sizeof(*m_tQuickLanchPath));
 	memset(m_tParentPath, 0, sizeof(m_tParentPath) / sizeof(*m_tParentPath));
-	/*m_strBrowserList = {
-		LinkItem(0,TEXT("360SE.EXE"),{0}),//360浏览器    
-		LinkItem(0,TEXT("IEXPLORE.EXE"),{0}),//IE浏览器    
-		LinkItem(0,TEXT("FIREFOX.EXE"),{0}),//火狐    
-		LinkItem(0,TEXT("OPERA.EXE"),{0}),//Opera    
-		LinkItem(0,TEXT("MAXTHON.EXE"),{0}),//遨游    
-		LinkItem(0,TEXT("LOCAL SET"),{0}),//Google    
-		LinkItem(0,TEXT("THEWORLD.EXE"),{0}),//世界之窗    
-		LinkItem(0,TEXT("TTRAVELER.EXE"),{0}),//腾讯TT    
-	};*/
 }
 
 void CDesktopManagerDlg::DoDataExchange(CDataExchange* pDX)
@@ -86,6 +76,7 @@ BEGIN_MESSAGE_MAP(CDesktopManagerDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_WM_SIZE()
 	ON_BN_CLICKED(IDOK, &CDesktopManagerDlg::OnBnClickedOk)
+	ON_NOTIFY(NM_DBLCLK, IDC_LIST_LINK, &CDesktopManagerDlg::OnNMDblclkListLink)
 END_MESSAGE_MAP()
 
 
@@ -132,15 +123,17 @@ BOOL CDesktopManagerDlg::OnInitDialog()
 			PFN_SetLayeredWindowAttributes fnSetLayeredWindowAttributes = (PFN_SetLayeredWindowAttributes)GetProcAddress(hMod, "SetLayeredWindowAttributes");//取得SetLayeredWindowAttributes函数指针
 			if (fnSetLayeredWindowAttributes != NULL)
 			{
-				fnSetLayeredWindowAttributes(this->GetSafeHwnd(), 0, 150, 2);      //这里使用的是透明度150，fnSetLayeredWindowAttributes是函数指针，指向了SetLayeredWindowAttributes函数。
+				fnSetLayeredWindowAttributes(this->GetSafeHwnd(), 0, 180, 2);      //这里使用的是透明度150，fnSetLayeredWindowAttributes是函数指针，指向了SetLayeredWindowAttributes函数。
 			}
 		}
 	}
 	SetListCtrlStyle(LCSTYPE_TILE);
 	m_NormalIconList.Create(32, 32, ILC_COLOR32 | ILC_MASK, 1, 1);
 	m_SmallIconList.Create(24, 24, ILC_COLOR24 | ILC_MASK, 1, 1);
-	GetPath(m_tDeskTopPath, m_tQuickLanchPath);
-	
+	GetDesktopPath(m_tDesktopPath);
+	GetPublicDesktopPath(m_tPublicDesktopPath);
+	GetDesktopIShellFolder();
+	GetPublicDesktopIShellFolder();
 	ResizeWindow();
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
@@ -210,4 +203,16 @@ void CDesktopManagerDlg::OnBnClickedOk()
 {
 	// TODO: Add your control notification handler code here
 	CDialogEx::OnOK();
+}
+
+
+void CDesktopManagerDlg::OnNMDblclkListLink(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+	// TODO: Add your control notification handler code here
+	*pResult = 0;
+	if (pNMItemActivate->iItem != (-1))
+	{
+		ShellExecute(NULL, TEXT("OPEN"), m_strLinkList[pNMItemActivate->iItem].path.c_str(), NULL, NULL, SW_SHOWNORMAL);
+	}
 }
