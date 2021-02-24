@@ -222,38 +222,69 @@ void CDesktopManagerDlg::OnBnClickedOk()
 	{
 		GetIEnumIDList(m_pIShellFolderDesktopPublic, FALSE, EIDLTYPE_DESKTOP_PUBLIC);
 	}
-	static INT nFlags = SW_SHOWNORMAL;
+	SHELLFLAGSTATE sfs = { 0 };
+	SHGetSettings(&sfs, SSF_HIDEICONS);
+	static INT nFlags = sfs.fHideIcons ? SW_HIDE : SW_SHOWNORMAL;
 	nFlags = (nFlags == SW_SHOWNORMAL) ? SW_HIDE : SW_SHOWNORMAL;
 
 	CRect rect = {};
 	GetWindowRect(rect);
 	MoveWindow(rect.left, rect.top, 480 + ((nFlags == SW_HIDE) ? -SW_SHOWNORMAL : SW_SHOWNORMAL), (m_strLinkList.size() / 6 + 1) * 80 > 480 ? 480 : (m_strLinkList.size() / 8 + 1) * 80);
 
-	//HWND hDesktopWnd = ::FindWindowEx(::GetDesktopWindow(), NULL, WC_LISTVIEW, TEXT(""));
-	//::ShowWindow(hDesktopWnd, nFlags);
-
+	if (nFlags == SW_HIDE)
+	{
+		static HWND hSysListView32 = NULL;
+		SetTimer(NULL, 300, [](HWND hWnd, UINT uMsg, UINT_PTR uTimeID, DWORD dwTime) 
+			{
+				switch (uTimeID)
+				{
+				case NULL:
+				{
+					SHELLFLAGSTATE sfs = { 0 };
+					SHGetSettings(&sfs, SSF_HIDEICONS);
+					if (sfs.fHideIcons == FALSE)
+					{
+						HWND hProgman = ::FindWindow(TEXT("Progman"), TEXT("Program Manager")); //find desktop icons
+						if (hProgman != NULL)
+						{
+							HWND hShellDllDefView = ::FindWindowEx(hProgman, NULL, TEXT("SHELLDLL_DefView"), NULL);
+							if (hShellDllDefView != NULL)
+							{
+								hSysListView32 = ::FindWindowEx(hShellDllDefView, NULL, TEXT("SysListView32"), NULL);
+							}
+						}
+					}
+					if (hSysListView32 != NULL)
+					{
+						::ShowWindow(hSysListView32, nFlags);
+					}
+					if (nFlags == SW_SHOWNORMAL)
+					{
+						::KillTimer(hWnd, NULL);
+					}
+				}
+				break;
+				default:
+					break;
+				}
+			});
+	}
 	HWND hTaskBar = ::FindWindow(TEXT("Shell_TrayWnd"), NULL);//find taskbar handle
 	//::ShowWindow(hTaskBar, nFlags);
-	HWND hDeskIcon = ::FindWindow(TEXT("Progman"), TEXT("Program Manager")); //find desktop icons
+		
 	//::ShowWindow(hDeskIcon, nFlags);
-
-	SHELLSTATE ss = { 0 };
-	SecureZeroMemory(&ss, sizeof(ss));
-	SHELLFLAGSTATE sfs = { 0 };
-	SHGetSettings(&sfs, SSF_HIDEICONS);
+	//SHELLSTATE ss = { 0 };
+	//SecureZeroMemory(&ss, sizeof(ss));
 	//sfs.fHideIcons = !sfs.fHideIcons;
-	//SHGetSettings(&sfs, SSF_HIDEICONS);
-	
-	SHGetSetSettings(&ss, SSF_HIDEICONS, FALSE);
-	ss.fHideIcons = !ss.fHideIcons;
-	SHGetSetSettings(&ss, SSF_HIDEICONS, TRUE);
-	SetDesktopIconsState(ss.fHideIcons);
+	//SHGetSettings(&sfs, SSF_HIDEICONS);	
+	//SHGetSetSettings(&ss, SSF_HIDEICONS, FALSE);
+	//ss.fHideIcons = !ss.fHideIcons;
+	//SHGetSetSettings(&ss, SSF_HIDEICONS, TRUE);
+	//SetDesktopIconsState(ss.fHideIcons);
 	//PDWORD_PTR lpdwResult = 0;
 	//SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, NULL, NULL, SMTO_ABORTIFHUNG, 3, lpdwResult);
 	//SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_FLUSHNOWAIT, NULL, NULL);
 	//SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, NULL, NULL);
-	SHChangeNotify(SHCNE_ALLEVENTS, SHCNE_UPDATEDIR | SHCNE_UPDATEITEM, NULL, NULL);
-	SHGetSettings(&sfs, SSF_HIDEICONS);
 }
 
 
