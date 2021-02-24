@@ -75,6 +75,7 @@ public:
             GetDlgItem(IDC_LIST_LINK)->MoveWindow(CRect(CPoint(0, rectOk.Height()), CSize(rect.Width(), rect.Height() - rectOk.Height())), FALSE);
             m_nRow = 0;
             m_nCol = 0;
+            m_pListLink->DeleteAllItems();
             for (size_t i = 0; i < m_strLinkList.size(); i++)
             {
                 LV_ITEM lvi = { 0 };
@@ -102,6 +103,10 @@ public:
 public:
     INT m_nRow = 0;
     INT m_nCol = 0;
+    INT m_nFlags = (-1);
+    HWND m_hProgman = NULL;
+    HWND m_hShellDllDefView = NULL;
+    HWND m_hSysListView32 = NULL;
     TCHAR m_tParentPath[MAX_PATH] = TEXT("");
     TCHAR m_tLogonDesktopPath[MAX_PATH] = TEXT("");
     TCHAR m_tPublicDesktopPath[MAX_PATH] = TEXT("");
@@ -118,7 +123,46 @@ public:
     IEnumIDList* m_pIEnumFolder = NULL;
     IEnumIDList* m_pFirstLayerFolder = NULL;
 public:
-
+    void HideOrShowDeskTopIcons()
+    {
+        SHELLFLAGSTATE sfs = { 0 };
+        SHGetSettings(&sfs, SSF_HIDEICONS);
+        if (sfs.fHideIcons == FALSE)
+        {
+            HWND hProgman = NULL;
+            HWND hShellDllDefView = NULL;
+            hProgman = ::FindWindow(TEXT("Progman"), TEXT("Program Manager")); //find desktop icons
+            if (hProgman != NULL)
+            {
+                if (hProgman != m_hProgman)
+                {
+                    m_hSysListView32 = NULL;
+                }
+                hShellDllDefView = ::FindWindowEx(hProgman, NULL, TEXT("SHELLDLL_DefView"), NULL);
+                if (hShellDllDefView != NULL)
+                {
+                    if (hShellDllDefView != m_hShellDllDefView)
+                    {
+                        m_hSysListView32 = NULL;
+                    }
+                    if (hProgman != m_hProgman || hShellDllDefView != m_hShellDllDefView)
+                    {
+                        m_hProgman = hProgman;
+                        m_hShellDllDefView = hShellDllDefView;
+                        m_hSysListView32 = ::FindWindowEx(hShellDllDefView, NULL, TEXT("SysListView32"), NULL);
+                    }
+                }
+            }
+        }
+        if (m_hSysListView32 != NULL)
+        {
+            ::ShowWindow(m_hSysListView32, m_nFlags);
+        }
+        if (m_nFlags == SW_SHOWNORMAL)
+        {
+            ::KillTimer(GetSafeHwnd(), NULL);
+        }
+    }
     void SetListCtrlStyle(ListCtrlStyleType lcstype)
     {
         m_pListLink->ModifyStyleEx(0, LVS_EX_DOUBLEBUFFER, TRUE);
@@ -424,4 +468,5 @@ public:
         if (pIPersistFile) pIPersistFile->Release();
         return TRUE;
     }
+    afx_msg void OnBnClickedCancel();
 };

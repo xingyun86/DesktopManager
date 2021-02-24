@@ -80,6 +80,7 @@ BEGIN_MESSAGE_MAP(CDesktopManagerDlg, CDialogEx)
 	ON_BN_CLICKED(IDOK, &CDesktopManagerDlg::OnBnClickedOk)
 	ON_NOTIFY(NM_DBLCLK, IDC_LIST_LINK, &CDesktopManagerDlg::OnNMDblclkListLink)
 	ON_WM_NCHITTEST()
+	ON_BN_CLICKED(IDCANCEL, &CDesktopManagerDlg::OnBnClickedCancel)
 END_MESSAGE_MAP()
 
 
@@ -115,6 +116,11 @@ BOOL CDesktopManagerDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
 	// TODO: Add extra initialization here
+	SetDlgItemText(IDOK, TEXT("刷新"));
+	SetDlgItemText(IDCANCEL, TEXT("退出"));
+	SetDlgItemText(IDC_EDIT_NAME, TEXT("桌面快捷方式"));
+	GetDlgItem(IDC_EDIT_NAME)->EnableWindow(FALSE);
+	SetWindowLongPtr(GetSafeHwnd(), GWLP_USERDATA, (LONG_PTR)this);
 	m_pListLink = ((CListCtrl*)(GetDlgItem(IDC_LIST_LINK)));
 	/*{
 		SetWindowLong(this->GetSafeHwnd(), GWL_EXSTYLE,	GetWindowLong(this->GetSafeHwnd(), GWL_EXSTYLE) ^ 0X80000);
@@ -140,6 +146,8 @@ BOOL CDesktopManagerDlg::OnInitDialog()
 	GetPublicDesktopPath(m_tPublicDesktopPath);
 	GetLogonDesktopIShellFolder();
 	GetPublicDesktopIShellFolder();
+	
+	OnBnClickedOk();
 
 	ResizeWindow();
 
@@ -210,7 +218,6 @@ void CDesktopManagerDlg::OnBnClickedOk()
 {
 	// TODO: Add your control notification handler code here
 	//CDialogEx::OnOK();
-	m_pListLink->DeleteAllItems();
 	m_strLinkList.clear();
 	while (m_NormalIconList.Remove(0));
 	while (m_SmallIconList.Remove(0));
@@ -222,46 +229,28 @@ void CDesktopManagerDlg::OnBnClickedOk()
 	{
 		GetIEnumIDList(m_pIShellFolderDesktopPublic, FALSE, EIDLTYPE_DESKTOP_PUBLIC);
 	}
-	SHELLFLAGSTATE sfs = { 0 };
-	SHGetSettings(&sfs, SSF_HIDEICONS);
-	static INT nFlags = sfs.fHideIcons ? SW_HIDE : SW_SHOWNORMAL;
-	nFlags = (nFlags == SW_SHOWNORMAL) ? SW_HIDE : SW_SHOWNORMAL;
+	if (m_nFlags == (-1))
+	{
+		SHELLFLAGSTATE sfs = { 0 };
+		SHGetSettings(&sfs, SSF_HIDEICONS);
+		m_nFlags = sfs.fHideIcons ? SW_HIDE : SW_SHOWNORMAL;
+	}
+	m_nFlags = (m_nFlags == SW_SHOWNORMAL) ? SW_HIDE : SW_SHOWNORMAL;
 
 	CRect rect = {};
 	GetWindowRect(rect);
-	MoveWindow(rect.left, rect.top, 480 + ((nFlags == SW_HIDE) ? -SW_SHOWNORMAL : SW_SHOWNORMAL), (m_strLinkList.size() / 6 + 1) * 80 > 480 ? 480 : (m_strLinkList.size() / 8 + 1) * 80);
+	MoveWindow(rect.left, rect.top, 480 + ((m_nFlags == SW_HIDE) ? -SW_SHOWNORMAL : SW_SHOWNORMAL), (m_strLinkList.size() / 6 + 1) * 80 > 480 ? 480 : (m_strLinkList.size() / 8 + 1) * 80);
 
-	if (nFlags == SW_HIDE)
+	if (m_nFlags == SW_HIDE)
 	{
-		static HWND hSysListView32 = NULL;
 		SetTimer(NULL, 300, [](HWND hWnd, UINT uMsg, UINT_PTR uTimeID, DWORD dwTime) 
 			{
+				CDesktopManagerDlg* thiz = (CDesktopManagerDlg*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
 				switch (uTimeID)
 				{
 				case NULL:
 				{
-					SHELLFLAGSTATE sfs = { 0 };
-					SHGetSettings(&sfs, SSF_HIDEICONS);
-					if (sfs.fHideIcons == FALSE)
-					{
-						HWND hProgman = ::FindWindow(TEXT("Progman"), TEXT("Program Manager")); //find desktop icons
-						if (hProgman != NULL)
-						{
-							HWND hShellDllDefView = ::FindWindowEx(hProgman, NULL, TEXT("SHELLDLL_DefView"), NULL);
-							if (hShellDllDefView != NULL)
-							{
-								hSysListView32 = ::FindWindowEx(hShellDllDefView, NULL, TEXT("SysListView32"), NULL);
-							}
-						}
-					}
-					if (hSysListView32 != NULL)
-					{
-						::ShowWindow(hSysListView32, nFlags);
-					}
-					if (nFlags == SW_SHOWNORMAL)
-					{
-						::KillTimer(hWnd, NULL);
-					}
+					thiz->HideOrShowDeskTopIcons();
 				}
 				break;
 				default:
@@ -312,4 +301,13 @@ LRESULT CDesktopManagerDlg::OnNcHitTest(CPoint point)
 	ClientToScreen(&rect);
 	return rect.PtInRect(point) ? HTCAPTION : CDialog::OnNcHitTest(point);   //鼠标如果在客户区，将其当作标题栏
 	//return CDialogEx::OnNcHitTest(point);
+}
+
+
+void CDesktopManagerDlg::OnBnClickedCancel()
+{
+	// TODO: Add your control notification handler code here
+	m_nFlags = SW_SHOWNORMAL;
+	HideOrShowDeskTopIcons();
+	CDialogEx::OnCancel();
 }
