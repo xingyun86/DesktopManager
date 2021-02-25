@@ -30,8 +30,9 @@
 
 
 #include <atlbase.h>
-#include <vector>
 #include <string>
+#include <vector>
+#include <unordered_map>
 
 #if !defined(UNICODE) && !defined(_UNICODE)
 typedef std::string TSTRING;
