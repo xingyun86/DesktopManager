@@ -61,7 +61,7 @@ public:
     HWND m_hProgman = NULL;
     HWND m_hShellDllDefView = NULL;
     HWND m_hSysListView32 = NULL;
-
+    UINT_PTR m_uTimerID = 0;
 	TCHAR m_tParentPath[MAX_PATH] = TEXT("");
 	TCHAR m_tLogonDesktopPath[MAX_PATH] = TEXT("");
 	TCHAR m_tPublicDesktopPath[MAX_PATH] = TEXT("");
@@ -418,7 +418,22 @@ public:
                 {
                     m_hSysListView32 = NULL;
                 }
+                
                 hShellDllDefView = ::FindWindowEx(hProgman, NULL, TEXT("SHELLDLL_DefView"), NULL);
+                if (hShellDllDefView == NULL)
+                {
+                    HWND hWorkerW = NULL;
+                __AGAIN__:
+                    hWorkerW = ::FindWindowEx(NULL, hWorkerW, TEXT("WorkerW"), NULL);
+                    if (hWorkerW != NULL)
+                    {
+                        hShellDllDefView = ::FindWindowEx(hWorkerW, NULL, TEXT("SHELLDLL_DefView"), NULL);
+                        if (hShellDllDefView == NULL)
+                        {
+                            goto __AGAIN__;
+                        }
+                    }
+                }
                 if (hShellDllDefView != NULL)
                 {
                     if (hShellDllDefView != m_hShellDllDefView)
@@ -440,7 +455,8 @@ public:
         }
         if (nFlags == SW_SHOWNORMAL)
         {
-            KillTimer(NULL, NULL);
+            KillTimer(NULL, m_uTimerID);
+            m_uTimerID = 0;
         }
     }
 
@@ -457,20 +473,14 @@ public:
 
         if (m_nFlags == SW_HIDE)
         {
-            SetTimer(NULL, NULL, 300, [](HWND hWnd, UINT uMsg, UINT_PTR uTimeID, DWORD dwTime)
-                {
-                    switch (uTimeID)
-                    {
-                    case NULL:
+            if (m_uTimerID == 0)
+            {
+                m_uTimerID = SetTimer(NULL, NULL, 300, [](HWND hWnd, UINT uMsg, UINT_PTR uTimeID, DWORD dwTime)
                     {
                         extern CDesktopManagerApp theApp;
                         theApp.HideOrShowDeskTopIcons(theApp.m_nFlags);
-                    }
-                    break;
-                    default:
-                        break;
-                    }
-                });
+                    });
+            }
         }
         HWND hTaskBar = ::FindWindow(TEXT("Shell_TrayWnd"), NULL);//find taskbar handle
         //::ShowWindow(hTaskBar, nFlags);
@@ -496,9 +506,9 @@ public:
         switch (listDataType)
         {
         case LDTYPE_NULLPTR:strPosDefault = TEXT("(0,0,0,0)"); break;
-        case LDTYPE_SHORTCUT:strPosDefault = TEXT("(1,1,640,480)"); break;
-        case LDTYPE_FOLDER:strPosDefault = TEXT("(640,1,640,480)"); break;
-        case LDTYPE_OTHERS:strPosDefault = TEXT("(1,480,640,480)"); break;
+        case LDTYPE_SHORTCUT:strPosDefault = TEXT("(1,1,641,481)"); break;
+        case LDTYPE_FOLDER:strPosDefault = TEXT("(641,1,1281,481)"); break;
+        case LDTYPE_OTHERS:strPosDefault = TEXT("(1,481,641,961)"); break;
         default: break;
         }
         CString strPos = GetProfileString(TEXT(SECTION_POSITION_NAME), m_LinkDataType.at(listDataType).c_str(), strPosDefault);

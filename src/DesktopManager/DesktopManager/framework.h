@@ -31,6 +31,7 @@
 
 #include <atlbase.h>
 #include <string>
+#include <thread>
 #include <vector>
 #include <unordered_map>
 

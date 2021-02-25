@@ -135,7 +135,7 @@ BOOL CDesktopManagerDlg::OnInitDialog()
 	OnBnClickedOk();
 	CRect rect = {};
 	theApp.LoadItemPostion(rect, m_listDataType);
-	MoveWindow(rect.left, rect.top, rect.Width(), rect.Height());
+	MoveWindow(rect.left, rect.top, (rect.Width() == 0) ? 640: rect.Width(), (rect.Height() == 0) ? 480 : rect.Height());
 	ResizeWindow();
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
