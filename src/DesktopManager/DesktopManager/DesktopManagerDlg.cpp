@@ -66,11 +66,11 @@ BEGIN_MESSAGE_MAP(CDesktopManagerDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_WM_SIZE()
+	ON_WM_MOVE()
 	ON_BN_CLICKED(IDOK, &CDesktopManagerDlg::OnBnClickedOk)
+	ON_BN_CLICKED(IDCANCEL, &CDesktopManagerDlg::OnBnClickedCancel)
 	ON_NOTIFY(NM_DBLCLK, IDC_LIST_LINK, &CDesktopManagerDlg::OnNMDblclkListLink)
 	ON_WM_NCHITTEST()
-	ON_BN_CLICKED(IDCANCEL, &CDesktopManagerDlg::OnBnClickedCancel)
-	ON_WM_MOVE()
 END_MESSAGE_MAP()
 
 
@@ -146,14 +146,16 @@ BOOL CDesktopManagerDlg::OnInitDialog()
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 LRESULT CDesktopManagerDlg::DefWindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam) {
-	if (WM_TASKBARCREATED_MSG == uMsg) // Explorer.exe重新启动
+	if (WM_TASKBARCREATED_MSG == uMsg)
 	{
+		// Explorer.exe重新启动,仅当顶层父窗口才可以接收到该消息
 		theApp.m_hShellDllDefView = NULL;
 		return TRUE;
 	}
 	// TODO: Add your specialized code here and/or call the base class
 	return CDialogEx::DefWindowProc(uMsg, wParam, lParam);
 }
+
 void CDesktopManagerDlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
 	if ((nID & 0xFFF0) == IDM_ABOUTBOX)
