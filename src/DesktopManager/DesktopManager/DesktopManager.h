@@ -15,6 +15,7 @@
 // See DesktopManager.cpp for the implementation of this class
 //
 #define SECTION_POSITION_NAME "POSITION"
+#define SECTION_HIDESHOW_NAME "HIDESHOW"
 typedef enum ListCtrlStyleType {
     LCSTYPE_DETAIL = 0,
     LCSTYPE_TILE,
@@ -43,6 +44,7 @@ typedef enum ListDataType {
     LDTYPE_FOLDER,
     LDTYPE_OTHERS,
 }ListDataType;
+
 class CDesktopManagerApp : public CWinApp
 {
 public:
@@ -87,6 +89,9 @@ public:
         {LDTYPE_FOLDER,TEXT("文件夹")},
         {LDTYPE_OTHERS,TEXT("其它")},
     };
+
+    CWnd* m_pDlgFolder = NULL;
+    CWnd* m_pDlgOthers = NULL;
 public:
     //获取登录用户桌面文件夹的IShellFolder接口指针    
     BOOL GetLogonDesktopIShellFolder()
@@ -458,6 +463,11 @@ public:
             KillTimer(NULL, m_uTimerID);
             m_uTimerID = 0;
         }
+
+        CString strBtnText = (nFlags == SW_HIDE) ? TEXT("显示桌面") : TEXT("隐藏桌面");
+        m_pDlgFolder->SetDlgItemText(IDOK, strBtnText);
+        m_pDlgOthers->SetDlgItemText(IDOK, strBtnText);
+        m_pMainWnd->SetDlgItemText(IDOK, strBtnText);
     }
 
     //隐藏显示桌面快捷方式图标
@@ -467,9 +477,9 @@ public:
         {
             SHELLFLAGSTATE sfs = { 0 };
             SHGetSettings(&sfs, SSF_HIDEICONS);
-            m_nFlags = sfs.fHideIcons ? SW_HIDE : SW_SHOWNORMAL;
+            m_nFlags = (!sfs.fHideIcons) ? SW_SHOWNORMAL : SW_HIDE;
         }
-        m_nFlags = (m_nFlags == SW_SHOWNORMAL) ? SW_HIDE : SW_SHOWNORMAL;
+        m_nFlags = (m_nFlags == SW_HIDE) ? SW_SHOWNORMAL : SW_HIDE;
 
         if (m_nFlags == SW_HIDE)
         {
@@ -481,6 +491,10 @@ public:
                         theApp.HideOrShowDeskTopIcons(theApp.m_nFlags);
                     });
             }
+        }
+        else
+        {
+            HideOrShowDeskTopIcons(m_nFlags);
         }
         HWND hTaskBar = ::FindWindow(TEXT("Shell_TrayWnd"), NULL);//find taskbar handle
         //::ShowWindow(hTaskBar, nFlags);
@@ -498,8 +512,54 @@ public:
         //SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, NULL, NULL, SMTO_ABORTIFHUNG, 3, lpdwResult);
         //SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_FLUSHNOWAIT, NULL, NULL);
         //SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, NULL, NULL);
+
+        SaveHideShowFlag(m_nFlags);
     }
 
+    //查找桌面图标父窗口
+    HWND FindDesktopIconParentWnd()
+    {
+        HWND hDesktopIconParent = NULL;
+        EnumWindows((WNDENUMPROC)[](HWND hwnd, LPARAM lParam)
+            {
+                HWND hShelldllDefview = FindWindowEx(hwnd, NULL, TEXT("SHELLDLL_DefView"), NULL);
+                if (hShelldllDefview == NULL)
+                {
+                    return TRUE;
+                }
+                HWND hSyslistview = FindWindowEx(hShelldllDefview, NULL, TEXT("SysListView32"), TEXT("FolderView"));
+                if (hSyslistview == NULL)
+                {
+                    return TRUE;
+                }
+                *((HWND*)lParam) = hShelldllDefview;
+                return FALSE;
+            }, (LPARAM)&hDesktopIconParent);
+        return hDesktopIconParent;
+    }
+    //查找桌面图标窗口
+    HWND FindDesktopIconWnd()
+    {
+        HWND hDesktopIcon = NULL;
+        EnumWindows((WNDENUMPROC)[](HWND hwnd, LPARAM lParam)
+            {
+                HWND hShelldllDefview = FindWindowEx(hwnd, NULL, TEXT("SHELLDLL_DefView"), NULL);
+                if (hShelldllDefview == NULL)
+                {
+                    return TRUE;
+                }
+                HWND hSyslistview = FindWindowEx(hShelldllDefview, NULL, TEXT("SysListView32"), TEXT("FolderView"));
+                if (hSyslistview == NULL)
+                {
+                    return TRUE;
+                }
+                *((HWND*)lParam) = hSyslistview;
+                return FALSE;
+            }, (LPARAM)&hDesktopIcon);
+        return hDesktopIcon;
+    }
+
+    //加载窗口位置坐标
     void LoadItemPostion(CRect & rect, ListDataType listDataType)
     {
         CString strPosDefault = TEXT("");
@@ -514,13 +574,28 @@ public:
         CString strPos = GetProfileString(TEXT(SECTION_POSITION_NAME), m_LinkDataType.at(listDataType).c_str(), strPosDefault);
         _stscanf(strPos, TEXT("(%d,%d,%d,%d)"), &rect.left, &rect.top, &rect.right, &rect.bottom);
     }
-    void SaveItemPostion(CRect& rect, ListDataType listDataType)
+    //保存窗口位置坐标
+    void SaveItemPostion(CRect & rect, ListDataType listDataType)
     {
         CString strPos = TEXT("");
         strPos.Format(TEXT("(%d,%d,%d,%d)"), rect.left, rect.top, rect.right, rect.bottom);
         WriteProfileString(TEXT(SECTION_POSITION_NAME), m_LinkDataType.at(listDataType).c_str(), strPos);
     }
 
+    //加载窗口隐藏显示标识
+    void LoadHideShowFlag(INT & nHideShowFlag)
+    {
+        CString strFlagDefault = TEXT("0");
+        CString strFlag = GetProfileString(TEXT(SECTION_HIDESHOW_NAME), TEXT(SECTION_HIDESHOW_NAME), strFlagDefault);
+        _stscanf(strFlag, TEXT("%d"), &nHideShowFlag);
+    }
+    //保存窗口隐藏显示标识
+    void SaveHideShowFlag(INT& nHideShowFlag)
+    {
+        CString strFlag = TEXT("");
+        strFlag.Format(TEXT("%d"), nHideShowFlag);
+        WriteProfileString(TEXT(SECTION_HIDESHOW_NAME), TEXT(SECTION_HIDESHOW_NAME), strFlag);
+    }
 };
 
 extern CDesktopManagerApp theApp;

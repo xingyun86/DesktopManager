@@ -104,15 +104,25 @@ BOOL CDesktopManagerDlg::OnInitDialog()
 	//  when the application's main window is not a dialog
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
-
+	
 	// TODO: Add extra initialization here
-	SetDlgItemText(IDOK, TEXT("刷新"));
+	ModifyStyleEx(WS_EX_APPWINDOW, WS_EX_TOOLWINDOW);
+	SetParent(FromHandle(theApp.FindDesktopIconParentWnd()));
+
+	CRect rect = {};
+	theApp.LoadItemPostion(rect, m_listDataType);
+	if (m_listDataType == LDTYPE_SHORTCUT)
+	{
+		theApp.HideOrShowDeskTopIcons(theApp.m_nFlags);
+	}
+	CString strBtnText = (theApp.m_nFlags == SW_HIDE) ? TEXT("显示桌面") : TEXT("隐藏桌面");
+	SetDlgItemText(IDOK, strBtnText);
 	SetDlgItemText(IDCANCEL, TEXT("退出"));
 	SetDlgItemText(IDC_EDIT_NAME, theApp.m_LinkDataType.at(m_listDataType).c_str());// TEXT("桌面快捷方式"));
 	GetDlgItem(IDC_EDIT_NAME)->EnableWindow(FALSE);
 
 	m_pListLink = ((CListCtrl*)(GetDlgItem(IDC_LIST_LINK)));
-	/*{
+	{
 		SetWindowLong(this->GetSafeHwnd(), GWL_EXSTYLE,	GetWindowLong(this->GetSafeHwnd(), GWL_EXSTYLE) ^ 0X80000);
 		HMODULE hMod = GetModuleHandle(TEXT("USER32.DLL")); //显式加载DLL
 		if (hMod != NULL)
@@ -121,10 +131,10 @@ BOOL CDesktopManagerDlg::OnInitDialog()
 			PFN_SetLayeredWindowAttributes fnSetLayeredWindowAttributes = (PFN_SetLayeredWindowAttributes)GetProcAddress(hMod, "SetLayeredWindowAttributes");//取得SetLayeredWindowAttributes函数指针
 			if (fnSetLayeredWindowAttributes != NULL)
 			{
-				fnSetLayeredWindowAttributes(this->GetSafeHwnd(), 0, 180, 2);      //这里使用的是透明度150，fnSetLayeredWindowAttributes是函数指针，指向了SetLayeredWindowAttributes函数。
+				fnSetLayeredWindowAttributes(this->GetSafeHwnd(), 0, 222, 2);      //这里使用的是透明度150，fnSetLayeredWindowAttributes是函数指针，指向了SetLayeredWindowAttributes函数。
 			}
 		}
-	}*/
+	}
 	theApp.SetListCtrlStyle(m_pListLink, LCSTYPE_TILE);
 	//m_pListLink->ModifyStyle(0, LVS_NOSCROLL);
 	//m_pListLink->ShowScrollBar(SB_HORZ, FALSE);
@@ -132,9 +142,6 @@ BOOL CDesktopManagerDlg::OnInitDialog()
 	m_pListLink->SetIconSpacing(CSize(64, 64));     //set pictures spacing
 	theApp.BindListCtrl(m_pListLink);
 
-	OnBnClickedOk();
-	CRect rect = {};
-	theApp.LoadItemPostion(rect, m_listDataType);
 	MoveWindow(rect.left, rect.top, (rect.Width() == 0) ? 640: rect.Width(), (rect.Height() == 0) ? 480 : rect.Height());
 	ResizeWindow();
 

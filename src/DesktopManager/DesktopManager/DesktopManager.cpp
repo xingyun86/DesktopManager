@@ -81,6 +81,7 @@ BOOL CDesktopManagerApp::InitInstance()
 #endif // _DEBUG
 
 	{
+		LoadHideShowFlag(m_nFlags);
 		m_pIEnumFolder = NULL;
 		m_pIShellFolderDesktopLogon = NULL;
 		m_pIShellFolderDesktopPublic = NULL;
@@ -112,19 +113,21 @@ BOOL CDesktopManagerApp::InitInstance()
 			GetIEnumIDList(m_pIShellFolderDesktopPublic, FALSE, EIDLTYPE_DESKTOP_PUBLIC);
 		}
 	}
-	CDesktopManagerDlg* dlgFolder = new CDesktopManagerDlg();
-	if (dlgFolder != NULL)
+	CDesktopManagerDlg* pDlgFolder = new CDesktopManagerDlg();
+	if (pDlgFolder != NULL)
 	{
-		dlgFolder->SetListDataType(LDTYPE_FOLDER);
-		dlgFolder->Create(IDD_DESKTOPMANAGER_DIALOG);
-		dlgFolder->ShowWindow(SW_SHOWNORMAL);
+		m_pDlgFolder = pDlgFolder;
+		pDlgFolder->SetListDataType(LDTYPE_FOLDER);
+		pDlgFolder->Create(IDD_DESKTOPMANAGER_DIALOG);
+		pDlgFolder->ShowWindow(SW_SHOWNORMAL);
 	}
-	CDesktopManagerDlg* dlgOthers = new CDesktopManagerDlg();
-	if (dlgOthers != NULL)
+	CDesktopManagerDlg* pDlgOthers = new CDesktopManagerDlg();
+	if (pDlgOthers != NULL)
 	{
-		dlgOthers->SetListDataType(LDTYPE_OTHERS);
-		dlgOthers->Create(IDD_DESKTOPMANAGER_DIALOG);
-		dlgOthers->ShowWindow(SW_SHOWNORMAL);
+		m_pDlgOthers = pDlgOthers;
+		pDlgOthers->SetListDataType(LDTYPE_OTHERS);
+		pDlgOthers->Create(IDD_DESKTOPMANAGER_DIALOG);
+		pDlgOthers->ShowWindow(SW_SHOWNORMAL);
 	}
 	CDesktopManagerDlg dlgShortcut;
 	m_pMainWnd = &dlgShortcut;
@@ -145,16 +148,17 @@ BOOL CDesktopManagerApp::InitInstance()
 		TRACE(traceAppMsg, 0, "Warning: dialog creation failed, so application is terminating unexpectedly.\n");
 		TRACE(traceAppMsg, 0, "Warning: if you are using MFC controls on the dialog, you cannot #define _AFX_NO_MFC_CONTROLS_IN_DIALOGS.\n");
 	}
-	if (dlgOthers != NULL)
+	if (pDlgOthers != NULL)
 	{
-		dlgOthers->DestroyWindow();
-		delete dlgOthers;
+		pDlgOthers->DestroyWindow();
+		delete pDlgOthers;
 	}
-	if (dlgFolder != NULL)
+	if (pDlgFolder != NULL)
 	{
-		dlgFolder->DestroyWindow();
-		delete dlgFolder;
+		pDlgFolder->DestroyWindow();
+		delete pDlgFolder;
 	}
+
 	// Delete the shell manager created above.
 	if (pShellManager != nullptr)
 	{
