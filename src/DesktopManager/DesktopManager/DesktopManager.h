@@ -89,9 +89,14 @@ public:
         {LDTYPE_FOLDER,TEXT("文件夹")},
         {LDTYPE_OTHERS,TEXT("其它")},
     };
+    std::unordered_map<ListDataType, CWnd*> m_LinkWnd = {
+        {LDTYPE_SHORTCUT,NULL},
+        {LDTYPE_FOLDER,NULL},
+        {LDTYPE_OTHERS,NULL},
+    };
 
-    CWnd* m_pDlgFolder = NULL;
-    CWnd* m_pDlgOthers = NULL;
+    BOOL m_bRunning = NULL;
+    HWND m_hDesktopIconParentWnd = NULL;
 public:
     //获取登录用户桌面文件夹的IShellFolder接口指针    
     BOOL GetLogonDesktopIShellFolder()
@@ -465,9 +470,13 @@ public:
         }
 
         CString strBtnText = (nFlags == SW_HIDE) ? TEXT("显示桌面") : TEXT("隐藏桌面");
-        m_pDlgFolder->SetDlgItemText(IDOK, strBtnText);
-        m_pDlgOthers->SetDlgItemText(IDOK, strBtnText);
-        m_pMainWnd->SetDlgItemText(IDOK, strBtnText);
+        for (auto& it : m_LinkWnd)
+        {
+            if (it.second != NULL)
+            {
+                it.second->SetDlgItemText(IDOK, strBtnText);
+            }
+        }
     }
 
     //隐藏显示桌面快捷方式图标
@@ -519,6 +528,32 @@ public:
     //查找桌面图标父窗口
     HWND FindDesktopIconParentWnd()
     {
+        HWND hProgman = NULL;
+        HWND hShellDllDefView = NULL;
+        hProgman = ::FindWindow(TEXT("Progman"), TEXT("Program Manager")); //find desktop icons
+        if (hProgman != NULL)
+        {
+            if (hProgman != m_hProgman)
+            {
+                m_hSysListView32 = NULL;
+            }
+
+            hShellDllDefView = ::FindWindowEx(hProgman, NULL, TEXT("SHELLDLL_DefView"), NULL);
+            if (hShellDllDefView == NULL)
+            {
+                HWND hWorkerW = NULL;
+            __AGAIN__:
+                hWorkerW = ::FindWindowEx(NULL, hWorkerW, TEXT("WorkerW"), NULL);
+                if (hWorkerW != NULL)
+                {
+                    hShellDllDefView = ::FindWindowEx(hWorkerW, NULL, TEXT("SHELLDLL_DefView"), NULL);
+                    if (hShellDllDefView == NULL)
+                    {
+                        goto __AGAIN__;
+                    }
+                }
+            }
+        }
         HWND hDesktopIconParent = NULL;
         EnumWindows((WNDENUMPROC)[](HWND hwnd, LPARAM lParam)
             {

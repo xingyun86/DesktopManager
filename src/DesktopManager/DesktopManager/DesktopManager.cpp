@@ -81,6 +81,7 @@ BOOL CDesktopManagerApp::InitInstance()
 #endif // _DEBUG
 
 	{
+		//初始化
 		LoadHideShowFlag(m_nFlags);
 		m_pIEnumFolder = NULL;
 		m_pIShellFolderDesktopLogon = NULL;
@@ -113,50 +114,62 @@ BOOL CDesktopManagerApp::InitInstance()
 			GetIEnumIDList(m_pIShellFolderDesktopPublic, FALSE, EIDLTYPE_DESKTOP_PUBLIC);
 		}
 	}
-	CDesktopManagerDlg* pDlgFolder = new CDesktopManagerDlg();
-	if (pDlgFolder != NULL)
+	MSG msg = { 0 };
+__RESTART__:
+	for (auto &it : m_LinkWnd)
 	{
-		m_pDlgFolder = pDlgFolder;
-		pDlgFolder->SetListDataType(LDTYPE_FOLDER);
-		pDlgFolder->Create(IDD_DESKTOPMANAGER_DIALOG);
-		pDlgFolder->ShowWindow(SW_SHOWNORMAL);
+		it.second = new CDesktopManagerDlg();
+		((CDesktopManagerDlg*)it.second)->SetListDataType(it.first);
+		((CDesktopManagerDlg*)it.second)->Create(IDD_DESKTOPMANAGER_DIALOG);
+		((CDesktopManagerDlg*)it.second)->ShowWindow(SW_SHOWNORMAL);
 	}
-	CDesktopManagerDlg* pDlgOthers = new CDesktopManagerDlg();
-	if (pDlgOthers != NULL)
+	
+	m_bRunning = TRUE;
+	while (m_bRunning)
 	{
-		m_pDlgOthers = pDlgOthers;
-		pDlgOthers->SetListDataType(LDTYPE_OTHERS);
-		pDlgOthers->Create(IDD_DESKTOPMANAGER_DIALOG);
-		pDlgOthers->ShowWindow(SW_SHOWNORMAL);
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			if (msg.message == WM_QUIT)
+			{
+				break;
+			}
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		else
+		{
+			if (m_hDesktopIconParentWnd == NULL)
+			{
+				// 完成某些工作的其他行程式
+				m_hDesktopIconParentWnd = theApp.FindDesktopIconParentWnd();
+
+				for (auto& it : m_LinkWnd)
+				{
+					if (it.second != NULL && it.second->GetSafeHwnd() != NULL)
+					{
+						it.second->ModifyStyleEx(WS_EX_APPWINDOW, WS_EX_TOOLWINDOW);
+						//it.second->SetParent(it.second->FromHandle(m_hDesktopIconParentWnd));
+						//it.second->ShowWindow(SW_SHOWNORMAL);
+					}
+				}
+			}
+			BOOL bFlag = FALSE;
+			for (auto& it : m_LinkWnd)
+			{
+				bFlag |= !((CDesktopManagerDlg*)it.second)->IsClose();
+			}
+			m_bRunning &= bFlag;
+			Sleep(16);
+		}
 	}
-	CDesktopManagerDlg dlgShortcut;
-	m_pMainWnd = &dlgShortcut;
-	dlgShortcut.SetListDataType(LDTYPE_SHORTCUT);
-	INT_PTR nResponse = dlgShortcut.DoModal();
-	if (nResponse == IDOK)
+	for (auto& it : m_LinkWnd)
 	{
-		// TODO: Place code here to handle when the dialog is
-		//  dismissed with OK
-	}
-	else if (nResponse == IDCANCEL)
-	{
-		// TODO: Place code here to handle when the dialog is
-		//  dismissed with Cancel
-	}
-	else if (nResponse == -1)
-	{
-		TRACE(traceAppMsg, 0, "Warning: dialog creation failed, so application is terminating unexpectedly.\n");
-		TRACE(traceAppMsg, 0, "Warning: if you are using MFC controls on the dialog, you cannot #define _AFX_NO_MFC_CONTROLS_IN_DIALOGS.\n");
-	}
-	if (pDlgOthers != NULL)
-	{
-		pDlgOthers->DestroyWindow();
-		delete pDlgOthers;
-	}
-	if (pDlgFolder != NULL)
-	{
-		pDlgFolder->DestroyWindow();
-		delete pDlgFolder;
+		if (it.second != NULL)
+		{
+			it.second->DestroyWindow();
+			delete it.second;
+			it.second = NULL;
+		}
 	}
 
 	// Delete the shell manager created above.

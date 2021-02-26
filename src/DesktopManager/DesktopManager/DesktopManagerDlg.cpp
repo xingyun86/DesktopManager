@@ -106,8 +106,10 @@ BOOL CDesktopManagerDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 	
 	// TODO: Add extra initialization here
-	ModifyStyleEx(WS_EX_APPWINDOW, WS_EX_TOOLWINDOW);
-	SetParent(FromHandle(theApp.FindDesktopIconParentWnd()));
+	//ModifyStyleEx(WS_EX_APPWINDOW, WS_EX_TOOLWINDOW);
+
+	//theApp.m_hDesktopIconParentWnd = theApp.FindDesktopIconParentWnd();
+	//SetParent(FromHandle(theApp.m_hDesktopIconParentWnd));
 
 	CRect rect = {};
 	theApp.LoadItemPostion(rect, m_listDataType);
@@ -266,5 +268,6 @@ void CDesktopManagerDlg::OnBnClickedCancel()
 	// TODO: Add your control notification handler code here
 	theApp.HideOrShowDeskTopIcons(SW_SHOWNORMAL);
 	CDialogEx::OnCancel();
+	m_bClose = TRUE;
 }
 
