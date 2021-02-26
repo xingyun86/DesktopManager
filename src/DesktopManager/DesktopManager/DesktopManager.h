@@ -59,7 +59,9 @@ public:
 	DECLARE_MESSAGE_MAP()
 
 public:
-    INT m_nFlags = (-1);
+    MSG m_msg = { 0 };
+    BOOL m_bRunning = NULL;
+    INT m_nHideFlag = (-1);
     HWND m_hProgman = NULL;
     HWND m_hShellDllDefView = NULL;
     HWND m_hSysListView32 = NULL;
@@ -75,8 +77,8 @@ public:
 	IEnumIDList* m_pFirstLayerFile = NULL;
 	IEnumIDList* m_pIEnumFolder = NULL;
 	IEnumIDList* m_pFirstLayerFolder = NULL;
-    CImageList m_NormalIconList = {};
-    CImageList m_SmallIconList = {};
+    CImageList m_NormalIconList = { };
+    CImageList m_SmallIconList = { };
 	std::vector<LinkItem> m_LinkDataList = {};
     std::unordered_map<ListDataType, CRect> m_LinkDataRect = {
         {LDTYPE_SHORTCUT,{0,0,0,0}},
@@ -95,8 +97,6 @@ public:
         {LDTYPE_OTHERS,NULL},
     };
 
-    BOOL m_bRunning = NULL;
-    HWND m_hDesktopIconParentWnd = NULL;
 public:
     //获取登录用户桌面文件夹的IShellFolder接口指针    
     BOOL GetLogonDesktopIShellFolder()
@@ -419,45 +419,7 @@ public:
         SHGetSettings(&sfs, SSF_HIDEICONS);
         if (sfs.fHideIcons == FALSE)
         {
-            HWND hProgman = NULL;
-            HWND hShellDllDefView = NULL;
-            hProgman = ::FindWindow(TEXT("Progman"), TEXT("Program Manager")); //find desktop icons
-            if (hProgman != NULL)
-            {
-                if (hProgman != m_hProgman)
-                {
-                    m_hSysListView32 = NULL;
-                }
-                
-                hShellDllDefView = ::FindWindowEx(hProgman, NULL, TEXT("SHELLDLL_DefView"), NULL);
-                if (hShellDllDefView == NULL)
-                {
-                    HWND hWorkerW = NULL;
-                __AGAIN__:
-                    hWorkerW = ::FindWindowEx(NULL, hWorkerW, TEXT("WorkerW"), NULL);
-                    if (hWorkerW != NULL)
-                    {
-                        hShellDllDefView = ::FindWindowEx(hWorkerW, NULL, TEXT("SHELLDLL_DefView"), NULL);
-                        if (hShellDllDefView == NULL)
-                        {
-                            goto __AGAIN__;
-                        }
-                    }
-                }
-                if (hShellDllDefView != NULL)
-                {
-                    if (hShellDllDefView != m_hShellDllDefView)
-                    {
-                        m_hSysListView32 = NULL;
-                    }
-                    if (hProgman != m_hProgman || hShellDllDefView != m_hShellDllDefView)
-                    {
-                        m_hProgman = hProgman;
-                        m_hShellDllDefView = hShellDllDefView;
-                        m_hSysListView32 = ::FindWindowEx(hShellDllDefView, NULL, TEXT("SysListView32"), NULL);
-                    }
-                }
-            }
+            m_hSysListView32 = FindDesktopIconWnd();
         }
         if (m_hSysListView32 != NULL)
         {
@@ -472,7 +434,7 @@ public:
         CString strBtnText = (nFlags == SW_HIDE) ? TEXT("显示桌面") : TEXT("隐藏桌面");
         for (auto& it : m_LinkWnd)
         {
-            if (it.second != NULL)
+            if (it.second != NULL && it.second->GetSafeHwnd() != NULL)
             {
                 it.second->SetDlgItemText(IDOK, strBtnText);
             }
@@ -482,28 +444,28 @@ public:
     //隐藏显示桌面快捷方式图标
     void HideOrShowDeskTopIcons()
     {
-        if (m_nFlags == (-1))
+        if (m_nHideFlag == (-1))
         {
             SHELLFLAGSTATE sfs = { 0 };
             SHGetSettings(&sfs, SSF_HIDEICONS);
-            m_nFlags = (!sfs.fHideIcons) ? SW_SHOWNORMAL : SW_HIDE;
+            m_nHideFlag = (!sfs.fHideIcons) ? SW_SHOWNORMAL : SW_HIDE;
         }
-        m_nFlags = (m_nFlags == SW_HIDE) ? SW_SHOWNORMAL : SW_HIDE;
+        m_nHideFlag = (m_nHideFlag == SW_HIDE) ? SW_SHOWNORMAL : SW_HIDE;
 
-        if (m_nFlags == SW_HIDE)
+        if (m_nHideFlag == SW_HIDE)
         {
             if (m_uTimerID == 0)
             {
                 m_uTimerID = SetTimer(NULL, NULL, 300, [](HWND hWnd, UINT uMsg, UINT_PTR uTimeID, DWORD dwTime)
                     {
                         extern CDesktopManagerApp theApp;
-                        theApp.HideOrShowDeskTopIcons(theApp.m_nFlags);
+                        theApp.HideOrShowDeskTopIcons(theApp.m_nHideFlag);
                     });
             }
         }
         else
         {
-            HideOrShowDeskTopIcons(m_nFlags);
+            HideOrShowDeskTopIcons(m_nHideFlag);
         }
         HWND hTaskBar = ::FindWindow(TEXT("Shell_TrayWnd"), NULL);//find taskbar handle
         //::ShowWindow(hTaskBar, nFlags);
@@ -522,11 +484,11 @@ public:
         //SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_FLUSHNOWAIT, NULL, NULL);
         //SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, NULL, NULL);
 
-        SaveHideShowFlag(m_nFlags);
+        SaveHideShowFlag(m_nHideFlag);
     }
 
     //查找桌面图标父窗口
-    HWND FindDesktopIconParentWnd()
+    HWND FindShellDllDefViewWnd()
     {
         HWND hProgman = NULL;
         HWND hShellDllDefView = NULL;
@@ -542,19 +504,19 @@ public:
             if (hShellDllDefView == NULL)
             {
                 HWND hWorkerW = NULL;
-            __AGAIN__:
+            __TRYIT_AGAIN__:
                 hWorkerW = ::FindWindowEx(NULL, hWorkerW, TEXT("WorkerW"), NULL);
                 if (hWorkerW != NULL)
                 {
                     hShellDllDefView = ::FindWindowEx(hWorkerW, NULL, TEXT("SHELLDLL_DefView"), NULL);
                     if (hShellDllDefView == NULL)
                     {
-                        goto __AGAIN__;
+                        goto __TRYIT_AGAIN__;
                     }
                 }
             }
         }
-        HWND hDesktopIconParent = NULL;
+        HWND hShellDllDefViewWnd = NULL;
         EnumWindows((WNDENUMPROC)[](HWND hwnd, LPARAM lParam)
             {
                 HWND hShelldllDefview = FindWindowEx(hwnd, NULL, TEXT("SHELLDLL_DefView"), NULL);
@@ -569,12 +531,42 @@ public:
                 }
                 *((HWND*)lParam) = hShelldllDefview;
                 return FALSE;
-            }, (LPARAM)&hDesktopIconParent);
-        return hDesktopIconParent;
+            }, (LPARAM)&hShellDllDefViewWnd);
+        return hShellDllDefViewWnd;
     }
     //查找桌面图标窗口
     HWND FindDesktopIconWnd()
     {
+        HWND hProgman = NULL;
+        HWND hShellDllDefView = NULL;
+        hProgman = ::FindWindow(TEXT("Progman"), TEXT("Program Manager")); //find desktop icons
+        if (hProgman != NULL)
+        {
+            if (hProgman != m_hProgman)
+            {
+                m_hSysListView32 = NULL;
+            }
+
+            hShellDllDefView = ::FindWindowEx(hProgman, NULL, TEXT("SHELLDLL_DefView"), NULL);
+            if (hShellDllDefView == NULL)
+            {
+                HWND hWorkerW = NULL;
+            __TRYIT_AGAIN__:
+                hWorkerW = ::FindWindowEx(NULL, hWorkerW, TEXT("WorkerW"), NULL);
+                if (hWorkerW != NULL)
+                {
+                    hShellDllDefView = ::FindWindowEx(hWorkerW, NULL, TEXT("SHELLDLL_DefView"), NULL);
+                    if (hShellDllDefView == NULL)
+                    {
+                        goto __TRYIT_AGAIN__;
+                    }
+                }
+            }
+            if (hShellDllDefView != NULL)
+            {
+                HWND hSyslistview = FindWindowEx(hShellDllDefView, NULL, TEXT("SysListView32"), TEXT("FolderView"));
+            }
+        }
         HWND hDesktopIcon = NULL;
         EnumWindows((WNDENUMPROC)[](HWND hwnd, LPARAM lParam)
             {
@@ -634,3 +626,4 @@ public:
 };
 
 extern CDesktopManagerApp theApp;
+extern UINT const WM_TASKBARCREATED_MSG;

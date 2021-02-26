@@ -106,25 +106,21 @@ BOOL CDesktopManagerDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 	
 	// TODO: Add extra initialization here
-	//ModifyStyleEx(WS_EX_APPWINDOW, WS_EX_TOOLWINDOW);
+	ModifyStyleEx(WS_EX_APPWINDOW, WS_EX_TOOLWINDOW);
 
 	//theApp.m_hDesktopIconParentWnd = theApp.FindDesktopIconParentWnd();
 	//SetParent(FromHandle(theApp.m_hDesktopIconParentWnd));
 
 	CRect rect = {};
 	theApp.LoadItemPostion(rect, m_listDataType);
-	if (m_listDataType == LDTYPE_SHORTCUT)
-	{
-		theApp.HideOrShowDeskTopIcons(theApp.m_nFlags);
-	}
-	CString strBtnText = (theApp.m_nFlags == SW_HIDE) ? TEXT("显示桌面") : TEXT("隐藏桌面");
+	CString strBtnText = (theApp.m_nHideFlag == SW_HIDE) ? TEXT("显示桌面") : TEXT("隐藏桌面");
 	SetDlgItemText(IDOK, strBtnText);
 	SetDlgItemText(IDCANCEL, TEXT("退出"));
 	SetDlgItemText(IDC_EDIT_NAME, theApp.m_LinkDataType.at(m_listDataType).c_str());// TEXT("桌面快捷方式"));
 	GetDlgItem(IDC_EDIT_NAME)->EnableWindow(FALSE);
 
 	m_pListLink = ((CListCtrl*)(GetDlgItem(IDC_LIST_LINK)));
-	{
+	/*{
 		SetWindowLong(this->GetSafeHwnd(), GWL_EXSTYLE,	GetWindowLong(this->GetSafeHwnd(), GWL_EXSTYLE) ^ 0X80000);
 		HMODULE hMod = GetModuleHandle(TEXT("USER32.DLL")); //显式加载DLL
 		if (hMod != NULL)
@@ -136,7 +132,7 @@ BOOL CDesktopManagerDlg::OnInitDialog()
 				fnSetLayeredWindowAttributes(this->GetSafeHwnd(), 0, 222, 2);      //这里使用的是透明度150，fnSetLayeredWindowAttributes是函数指针，指向了SetLayeredWindowAttributes函数。
 			}
 		}
-	}
+	}*/
 	theApp.SetListCtrlStyle(m_pListLink, LCSTYPE_TILE);
 	//m_pListLink->ModifyStyle(0, LVS_NOSCROLL);
 	//m_pListLink->ShowScrollBar(SB_HORZ, FALSE);
@@ -149,7 +145,15 @@ BOOL CDesktopManagerDlg::OnInitDialog()
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
-
+LRESULT CDesktopManagerDlg::DefWindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam) {
+	if (WM_TASKBARCREATED_MSG == uMsg) // Explorer.exe重新启动
+	{
+		theApp.m_hShellDllDefView = NULL;
+		return TRUE;
+	}
+	// TODO: Add your specialized code here and/or call the base class
+	return CDialogEx::DefWindowProc(uMsg, wParam, lParam);
+}
 void CDesktopManagerDlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
 	if ((nID & 0xFFF0) == IDM_ABOUTBOX)
@@ -266,8 +270,7 @@ void CDesktopManagerDlg::OnBnClickedOk()
 void CDesktopManagerDlg::OnBnClickedCancel()
 {
 	// TODO: Add your control notification handler code here
-	theApp.HideOrShowDeskTopIcons(SW_SHOWNORMAL);
+	SetParent(NULL);
 	CDialogEx::OnCancel();
-	m_bClose = TRUE;
+	m_bClosed = TRUE;
 }
-

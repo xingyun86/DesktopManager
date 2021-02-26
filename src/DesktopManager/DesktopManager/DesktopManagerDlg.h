@@ -25,16 +25,12 @@ protected:
 	HICON m_hIcon;
 
 	// Generated message map functions
-	virtual BOOL OnInitDialog(); 
-    virtual LRESULT DefWindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam) {
-            static UINT const WM_TASKBARCREATED_MSG = RegisterWindowMessage(TEXT("TaskbarCreated"));
-            if (WM_TASKBARCREATED_MSG == uMsg) // Explorer.exeÖØÐÂÆô¶¯
-            {
-                return TRUE;
-            }
-            // TODO: Add your specialized code here and/or call the base class
-            return CDialog::DefWindowProc(uMsg, wParam, lParam);
-    }
+	virtual BOOL OnInitDialog();
+    /*virtual void PostNcDestroy() {
+        delete this;
+        CDialogEx::PostNcDestroy();
+    }*/
+    virtual LRESULT DefWindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam);
 	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
@@ -98,7 +94,7 @@ public:
 private:
     INT m_nRow = 0;
     INT m_nCol = 0;
-    BOOL m_bClose = FALSE;
+    BOOL m_bClosed = FALSE;
     CListCtrl* m_pListLink = NULL;
     ListDataType m_listDataType = LDTYPE_NULLPTR;
 public:
@@ -106,8 +102,8 @@ public:
     {
         m_listDataType = listDataType;
     }
-    BOOL IsClose()
+    BOOL GetClosed()
     {
-        return m_bClose;
+        return m_bClosed;
     }
 };

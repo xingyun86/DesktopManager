@@ -34,6 +34,7 @@ CDesktopManagerApp::CDesktopManagerApp()
 // The one and only CDesktopManagerApp object
 
 CDesktopManagerApp theApp;
+UINT const WM_TASKBARCREATED_MSG = RegisterWindowMessage(TEXT("TaskbarCreated"));
 
 
 // CDesktopManagerApp initialization
@@ -82,7 +83,7 @@ BOOL CDesktopManagerApp::InitInstance()
 
 	{
 		//初始化
-		LoadHideShowFlag(m_nFlags);
+		LoadHideShowFlag(m_nHideFlag);
 		m_pIEnumFolder = NULL;
 		m_pIShellFolderDesktopLogon = NULL;
 		m_pIShellFolderDesktopPublic = NULL;
@@ -94,15 +95,28 @@ BOOL CDesktopManagerApp::InitInstance()
 		memset(m_tPublicDesktopPath, 0, sizeof(m_tPublicDesktopPath) / sizeof(*m_tPublicDesktopPath));
 		memset(m_tQuickLanchPath, 0, sizeof(m_tQuickLanchPath) / sizeof(*m_tQuickLanchPath));
 		memset(m_tParentPath, 0, sizeof(m_tParentPath) / sizeof(*m_tParentPath));
-		
-		m_NormalIconList.Create(32, 32, ILC_COLOR32 | ILC_MASK, 1, 1);
-		m_SmallIconList.Create(24, 24, ILC_COLOR24 | ILC_MASK, 1, 1);
-		while (m_NormalIconList.Remove(0));
-		while (m_SmallIconList.Remove(0));
-		m_LinkDataList.clear();
 
 		GetLogonDesktopPath(m_tLogonDesktopPath);
 		GetPublicDesktopPath(m_tPublicDesktopPath);
+	}
+__RESTARTS_EXPLORER__:
+	{
+		if (m_NormalIconList.m_hImageList != NULL)
+		{
+			while (m_NormalIconList.Remove(0));
+			m_NormalIconList.DeleteImageList();
+		}
+		if (m_SmallIconList.m_hImageList != NULL)
+		{
+			while (m_SmallIconList.Remove(0));
+			m_SmallIconList.DeleteImageList();
+		}
+
+		m_LinkDataList.clear();
+
+		m_NormalIconList.Create(32, 32, ILC_COLOR32 | ILC_MASK, 1, 1);
+		m_SmallIconList.Create(24, 24, ILC_COLOR24 | ILC_MASK, 1, 1);
+
 		GetLogonDesktopIShellFolder();
 		GetPublicDesktopIShellFolder();
 		if (m_pIShellFolderDesktopLogon != NULL)
@@ -114,8 +128,7 @@ BOOL CDesktopManagerApp::InitInstance()
 			GetIEnumIDList(m_pIShellFolderDesktopPublic, FALSE, EIDLTYPE_DESKTOP_PUBLIC);
 		}
 	}
-	MSG msg = { 0 };
-__RESTART__:
+	HideOrShowDeskTopIcons(m_nHideFlag);
 	for (auto &it : m_LinkWnd)
 	{
 		it.second = new CDesktopManagerDlg();
@@ -127,38 +140,59 @@ __RESTART__:
 	m_bRunning = TRUE;
 	while (m_bRunning)
 	{
-		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		if (PeekMessage(&m_msg, NULL, 0, 0, PM_REMOVE))
 		{
-			if (msg.message == WM_QUIT)
+			if (m_msg.message == WM_QUIT)
 			{
 				break;
 			}
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+			TranslateMessage(&m_msg);
+			DispatchMessage(&m_msg);
 		}
 		else
 		{
-			if (m_hDesktopIconParentWnd == NULL)
+			BOOL bClosed = FALSE;
+			BOOL bNormal = FALSE;
+			if (m_hShellDllDefView == NULL)
 			{
 				// 完成某些工作的其他行程式
-				m_hDesktopIconParentWnd = theApp.FindDesktopIconParentWnd();
-
-				for (auto& it : m_LinkWnd)
+				m_hShellDllDefView = theApp.FindShellDllDefViewWnd();
+				if (m_hShellDllDefView != NULL)
 				{
-					if (it.second != NULL && it.second->GetSafeHwnd() != NULL)
+					for (auto& it : m_LinkWnd)
 					{
-						it.second->ModifyStyleEx(WS_EX_APPWINDOW, WS_EX_TOOLWINDOW);
-						//it.second->SetParent(it.second->FromHandle(m_hDesktopIconParentWnd));
-						//it.second->ShowWindow(SW_SHOWNORMAL);
+						if (it.second != NULL && it.second->GetSafeHwnd() != NULL)
+						{
+							it.second->ModifyStyleEx(WS_EX_APPWINDOW, WS_EX_TOOLWINDOW);
+							it.second->SetParent(it.second->FromHandle(m_hShellDllDefView));
+							it.second->SetWindowPos(&CWnd::wndTopMost, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW);
+						}
 					}
 				}
 			}
-			BOOL bFlag = FALSE;
 			for (auto& it : m_LinkWnd)
 			{
-				bFlag |= !((CDesktopManagerDlg*)it.second)->IsClose();
+				bNormal |= (!(it.second->GetSafeHwnd() == NULL));
+				bClosed |= (!((CDesktopManagerDlg*)it.second)->GetClosed());
 			}
-			m_bRunning &= bFlag;
+			m_bRunning &= bClosed;
+			if (bNormal == FALSE)
+			{
+				for (auto& it : m_LinkWnd)
+				{
+					if (it.second != NULL)
+					{
+						((CDesktopManagerDlg*)it.second)->DestroyWindow();
+						delete ((CDesktopManagerDlg*)it.second);
+						it.second = NULL;
+					}
+				}
+				
+				m_hShellDllDefView = NULL;
+				printf("explorer exit");
+				goto __RESTARTS_EXPLORER__;
+			}
+			//释放CPU,避免卡顿
 			Sleep(16);
 		}
 	}
@@ -166,11 +200,13 @@ __RESTART__:
 	{
 		if (it.second != NULL)
 		{
-			it.second->DestroyWindow();
-			delete it.second;
+			((CDesktopManagerDlg*)it.second)->DestroyWindow();
+			delete ((CDesktopManagerDlg*)it.second);
 			it.second = NULL;
 		}
 	}
+
+	HideOrShowDeskTopIcons(SW_SHOWNORMAL);
 
 	// Delete the shell manager created above.
 	if (pShellManager != nullptr)
