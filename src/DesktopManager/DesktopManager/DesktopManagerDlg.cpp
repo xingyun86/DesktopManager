@@ -249,16 +249,51 @@ void CDesktopManagerDlg::OnNMDblclkListLink(NMHDR* pNMHDR, LRESULT* pResult)
 LRESULT CDesktopManagerDlg::OnNcHitTest(CPoint point)
 {
 	// TODO: Add your message handler code here and/or call default
-	CRect rect = {};
-	CRect rectOk = {};
-	CRect rectCancel= {};
-	GetClientRect(&rect);
-	GetDlgItem(IDOK)->GetClientRect(rectOk);
-	GetDlgItem(IDCANCEL)->GetClientRect(rectCancel);
-	rect.right = rect.Width() - (rectOk.Width() + rectCancel.Width());
-	rect.bottom = rectOk.Height();
-	ClientToScreen(&rect);
-	return rect.PtInRect(point) ? HTCAPTION : CDialog::OnNcHitTest(point);   //鼠标如果在客户区，将其当作标题栏
+
+	CRect rect;
+	GetWindowRect(&rect);
+	CRect rect1 = rect;
+	rect1.DeflateRect(6, 6, -6, -6);
+	rect1.NormalizeRect();
+	if (point.x <= rect.left + 2)
+		return HTLEFT;
+	else if (point.x >= rect.right - 2)
+		return HTRIGHT;
+	else if (point.y <= rect.top + 2)
+		return HTTOP;
+	else if (point.y >= rect.bottom - 2)
+		return HTBOTTOM;
+	else if (point.x <= rect.left + 6 && point.y <= rect.top + 6)
+		return HTTOPLEFT;
+	else if (point.x >= rect.right - 6 && point.y <= rect.top + 6)
+		return HTTOPRIGHT;
+	else if (point.x <= rect.left + 6 && point.y >= rect.bottom - 6)
+		return HTBOTTOMLEFT;
+	else if (point.x >= rect.right - 6 && point.y >= rect.bottom - 6)
+		return HTBOTTOMRIGHT;
+	else if (!rect.IsRectEmpty())
+	{
+		LRESULT uRet = CWnd::OnNcHitTest(point);
+		uRet = (uRet == HTCLIENT) ? HTCAPTION : uRet;
+		return uRet;
+	}
+	else
+	{
+		{
+			CRect rect = {};
+			CRect rectOk = {};
+			CRect rectCancel = {};
+			GetClientRect(&rect);
+			GetDlgItem(IDOK)->GetClientRect(rectOk);
+			GetDlgItem(IDCANCEL)->GetClientRect(rectCancel);
+			rect.right = rect.Width() - (rectOk.Width() + rectCancel.Width());
+			rect.bottom = rectOk.Height();
+			ClientToScreen(&rect);
+			return rect.PtInRect(point) ? HTCAPTION : CDialog::OnNcHitTest(point);   //鼠标如果在客户区，将其当作标题栏
+		}
+		return CWnd::OnNcHitTest(point);
+	}
+	return 0;
 	//return CDialogEx::OnNcHitTest(point);
 }
 

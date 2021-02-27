@@ -46,7 +46,7 @@ public:
     {
         if (m_pListLink != NULL)
         {
-            CRect rect = { 0,0, cx, cy };
+            CRect rect = { 0, 0, cx, cy };
             CRect rectOk = {};
             CRect rectCancel = {};
             if (rect.Width() <= 0)
@@ -55,10 +55,10 @@ public:
             }
             GetDlgItem(IDOK)->GetClientRect(rectOk);
             GetDlgItem(IDCANCEL)->GetClientRect(rectCancel);
-            GetDlgItem(IDOK)->MoveWindow(CRect(CPoint(rect.Width() - rectOk.Width() - rectCancel.Width(), 0), CSize(rectOk.Width(), rectOk.Height())), FALSE);
-            GetDlgItem(IDCANCEL)->MoveWindow(CRect(CPoint(rect.Width() - rectCancel.Width(), 0), CSize(rectCancel.Width(), rectCancel.Height())), FALSE);
-            GetDlgItem(IDC_EDIT_NAME)->MoveWindow(CRect(CPoint(0, 0), CSize(rect.Width() - rectOk.Width() - rectCancel.Width(), rectOk.Height())), FALSE);
-            GetDlgItem(IDC_LIST_LINK)->MoveWindow(CRect(CPoint(0, rectOk.Height()), CSize(rect.Width(), rect.Height() - rectOk.Height())), FALSE);
+            GetDlgItem(IDOK)->MoveWindow(CRect(CPoint(rect.Width() - rectOk.Width() - rectCancel.Width(), 1), CSize(rectOk.Width(), rectOk.Height())), FALSE);
+            GetDlgItem(IDCANCEL)->MoveWindow(CRect(CPoint(rect.Width() - rectCancel.Width(), 1), CSize(rectCancel.Width(), rectCancel.Height())), FALSE);
+            GetDlgItem(IDC_EDIT_NAME)->MoveWindow(CRect(CPoint(1, 1), CSize(rect.Width() - rectOk.Width() - rectCancel.Width(), rectOk.Height())), FALSE);
+            GetDlgItem(IDC_LIST_LINK)->MoveWindow(CRect(CPoint(1, rectOk.Height()), CSize(rect.Width() - 2, rect.Height() - rectOk.Height() - 2)), FALSE);
             m_nRow = 0;
             m_nCol = 0;
             m_pListLink->DeleteAllItems();
